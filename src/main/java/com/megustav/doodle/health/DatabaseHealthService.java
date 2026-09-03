@@ -1,6 +1,4 @@
-package com.megustav.health;
-
-import org.springframework.stereotype.Service;
+package com.megustav.doodle.health;
 
 public interface DatabaseHealthService {
 

@@ -1,7 +1,7 @@
-package com.megustav.health.impl;
+package com.megustav.doodle.health.impl;
 
-import com.megustav.health.DatabaseHealthRepository;
-import com.megustav.health.DatabaseHealthService;
+import com.megustav.doodle.health.DatabaseHealthRepository;
+import com.megustav.doodle.health.DatabaseHealthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

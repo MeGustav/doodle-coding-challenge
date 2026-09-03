@@ -1,4 +1,4 @@
-package com.megustav.health;
+package com.megustav.doodle.health;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
