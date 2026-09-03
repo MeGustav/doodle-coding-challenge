@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: doodle
+      POSTGRES_USER: doodle
+      POSTGRES_PASSWORD: doodle
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U doodle -d doodle"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/doodle
+      DB_USERNAME: doodle
+      DB_PASSWORD: doodle
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
