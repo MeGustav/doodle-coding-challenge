@@ -5,6 +5,7 @@ import com.megustav.doodle.users.exceptions.EmailAlreadyInUseException;
 import com.megustav.doodle.users.model.UserCreationRequest;
 import com.megustav.doodle.users.model.UserDto;
 import com.megustav.doodle.users.model.UserEntity;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -36,87 +37,99 @@ class UserServiceImplTest {
     @InjectMocks
     private UserServiceImpl userService;
 
-    @Test
-    void createUser_persistsAndReturnsDto_whenEmailIsFree() {
-        var request = new UserCreationRequest(NAME, EMAIL, TIMEZONE);
-        when(userRepository.existsByEmailIgnoreCase(EMAIL)).thenReturn(false);
+    @Nested
+    class CreateUser {
 
-        UserEntity persisted = mockPersistedEntity(NAME, EMAIL, TIMEZONE);
-        when(userRepository.saveAndFlush(any(UserEntity.class))).thenReturn(persisted);
+        @Test
+        void persistsAndReturnsDto_whenEmailIsFree() {
+            var request = new UserCreationRequest(NAME, EMAIL, TIMEZONE);
+            when(userRepository.existsByEmailIgnoreCase(EMAIL)).thenReturn(false);
 
-        UserDto result = userService.createUser(request);
+            UserEntity persisted = mockPersistedEntity(NAME, EMAIL, TIMEZONE);
+            when(userRepository.saveAndFlush(any(UserEntity.class))).thenReturn(persisted);
 
-        assertThat(result.id()).isEqualTo(persisted.getId());
-        assertThat(result.name()).isEqualTo(NAME);
-        assertThat(result.email()).isEqualTo(EMAIL);
-        assertThat(result.timezone()).isEqualTo(TIMEZONE);
-        assertThat(result.createdAt()).isEqualTo(persisted.getCreatedAt());
-        assertThat(result.updatedAt()).isEqualTo(persisted.getUpdatedAt());
+            UserDto result = userService.createUser(request);
+
+            assertThat(result.id()).isEqualTo(persisted.getId());
+            assertThat(result.name()).isEqualTo(NAME);
+            assertThat(result.email()).isEqualTo(EMAIL);
+            assertThat(result.timezone()).isEqualTo(TIMEZONE);
+            assertThat(result.createdAt()).isEqualTo(persisted.getCreatedAt());
+            assertThat(result.updatedAt()).isEqualTo(persisted.getUpdatedAt());
+        }
+
+        @Test
+        void throwsEmailAlreadyInUse_whenEmailAlreadyExists() {
+            when(userRepository.existsByEmailIgnoreCase(EMAIL)).thenReturn(true);
+
+            assertThatThrownBy(() -> userService.createUser(
+                    new UserCreationRequest(NAME, EMAIL, TIMEZONE)
+            )).isInstanceOf(EmailAlreadyInUseException.class);
+
+            verify(userRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
+        void throwsEmailAlreadyInUse_whenInsertLosesUniqueConstraintRace() {
+            when(userRepository.existsByEmailIgnoreCase(EMAIL)).thenReturn(false);
+            when(userRepository.saveAndFlush(any(UserEntity.class)))
+                    .thenThrow(new DataIntegrityViolationException("unique constraint violation"));
+
+            assertThatThrownBy(() -> userService.createUser(
+                    new UserCreationRequest(NAME, EMAIL, TIMEZONE)))
+                    .isInstanceOf(EmailAlreadyInUseException.class)
+                    .hasCauseInstanceOf(DataIntegrityViolationException.class);
+        }
     }
 
-    @Test
-    void createUser_throwsEmailAlreadyInUse_whenEmailAlreadyExists() {
-        when(userRepository.existsByEmailIgnoreCase(EMAIL)).thenReturn(true);
+    @Nested
+    class GetUser {
 
-        assertThatThrownBy(() -> userService.createUser(
-                new UserCreationRequest(NAME, EMAIL, TIMEZONE)
-        )).isInstanceOf(EmailAlreadyInUseException.class);
+        @Test
+        void returnsDto_whenUserExists() {
+            UserEntity entity = mockPersistedEntity(NAME, EMAIL, TIMEZONE);
+            when(userRepository.findById(entity.getId())).thenReturn(Optional.of(entity));
 
-        verify(userRepository, never()).saveAndFlush(any());
+            Optional<UserDto> result = userService.getUser(entity.getId());
+
+            assertThat(result).isPresent();
+            assertThat(result.get().id()).isEqualTo(entity.getId());
+            assertThat(result.get().email()).isEqualTo(EMAIL);
+        }
+
+        @Test
+        void returnsEmpty_whenUserDoesNotExist() {
+            UUID id = UUID.randomUUID();
+            when(userRepository.findById(id)).thenReturn(Optional.empty());
+
+            Optional<UserDto> result = userService.getUser(id);
+
+            assertThat(result).isEmpty();
+        }
     }
 
-    @Test
-    void createUser_throwsEmailAlreadyInUse_whenInsertLosesUniqueConstraintRace() {
-        when(userRepository.existsByEmailIgnoreCase(EMAIL)).thenReturn(false);
-        when(userRepository.saveAndFlush(any(UserEntity.class)))
-                .thenThrow(new DataIntegrityViolationException("unique constraint violation"));
+    @Nested
+    class FindByEmail {
 
-        assertThatThrownBy(() -> userService.createUser(
-                new UserCreationRequest(NAME, EMAIL, TIMEZONE)))
-                .isInstanceOf(EmailAlreadyInUseException.class)
-                .hasCauseInstanceOf(DataIntegrityViolationException.class);
-    }
+        @Test
+        void returnsDto_whenUserExists() {
+            UserEntity entity = mockPersistedEntity(NAME, EMAIL, TIMEZONE);
+            when(userRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(entity));
 
-    @Test
-    void getUser_returnsDto_whenUserExists() {
-        UserEntity entity = mockPersistedEntity(NAME, EMAIL, TIMEZONE);
-        when(userRepository.findById(entity.getId())).thenReturn(Optional.of(entity));
+            Optional<UserDto> result = userService.findByEmail(EMAIL);
 
-        Optional<UserDto> result = userService.getUser(entity.getId());
+            assertThat(result).isPresent();
+            assertThat(result.get().email()).isEqualTo(EMAIL);
+        }
 
-        assertThat(result).isPresent();
-        assertThat(result.get().id()).isEqualTo(entity.getId());
-        assertThat(result.get().email()).isEqualTo(EMAIL);
-    }
+        @Test
+        void returnsEmpty_whenNoUserMatches() {
+            when(userRepository.findByEmailIgnoreCase(anyString())).thenReturn(Optional.empty());
 
-    @Test
-    void getUser_returnsEmpty_whenUserDoesNotExist() {
-        UUID id = UUID.randomUUID();
-        when(userRepository.findById(id)).thenReturn(Optional.empty());
+            Optional<UserDto> result = userService.findByEmail("nobody@example.com");
 
-        Optional<UserDto> result = userService.getUser(id);
-
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void findByEmail_returnsDto_whenUserExists() {
-        UserEntity entity = mockPersistedEntity(NAME, EMAIL, TIMEZONE);
-        when(userRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(entity));
-
-        Optional<UserDto> result = userService.findByEmail(EMAIL);
-
-        assertThat(result).isPresent();
-        assertThat(result.get().email()).isEqualTo(EMAIL);
-    }
-
-    @Test
-    void findByEmail_returnsEmpty_whenNoUserMatches() {
-        when(userRepository.findByEmailIgnoreCase(anyString())).thenReturn(Optional.empty());
-
-        Optional<UserDto> result = userService.findByEmail("nobody@example.com");
-
-        assertThat(result).isEmpty();
+            assertThat(result).isEmpty();
+        }
     }
 
     private static UserEntity mockPersistedEntity(String name, String email, String timezone) {

@@ -22,6 +22,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
 
+    @Override
     @Transactional
     public UserDto createUser(UserCreationRequest request) {
         if (userRepository.existsByEmailIgnoreCase(request.email())) {
@@ -51,6 +52,11 @@ public class UserServiceImpl implements UserService {
     @Override
     public Optional<UserDto> findByEmail(String email) {
         return userRepository.findByEmailIgnoreCase(email).map(UserServiceImpl::fromEntity);
+    }
+
+    @Override
+    public boolean exists(UUID id) {
+        return userRepository.existsById(id);
     }
 
     private static UserDto fromEntity(UserEntity entity) {

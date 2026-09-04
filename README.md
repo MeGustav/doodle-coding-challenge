@@ -2,10 +2,6 @@
 
 ## Disclaimers
 
-### Background
-
-* For the last 4 years I have been using mostly Kotlin, so my Java might be rusty.
-
 ### Agentic AI usage
 
 * For the past year or so I've been actively using AI agents at work (actively encouraged to). For this task I am not using any.
@@ -25,10 +21,10 @@ Just basic business fields, constraints and indexes later:
 * time_slots - basic unit of planning
   * id
   * user_id (fk)
-  * date
-  * start_time
-  * end_time
+  * starts_at
+  * ends_at
   * status (AVAILABLE / BOOKED /BLOCKED)
+  * I originally wanted a separate date plus a start and end time, but dropped the date as it was solving nothing and made using slots harder
 * meetings - well, a meeting :)
   * id
   * slot_id (fk)
@@ -42,6 +38,17 @@ Just basic business fields, constraints and indexes later:
   * meeting_id
   * role (ORGANIZER / REQUIRED / OPTIONAL)
   * rsvp (ACCEPTED / DECLINED /TENTATIVE)
+
+### Slots purpose and availability
+* Slots are the unit of scheduling, only them have the time range
+
+#### What I think would be best in terms of flexibility
+* If a user has 14:00 - 16:00 open slot and someone wants to create a 45 minuted meeting with this user at 14:30 - 15:15, we then transform that 2 hour slot into 3 slots: 14:00 - 14:30 available, 14:30 - 15:15 - booked and 15:15 - 16:00 - available.
+* If there are back-to-back available slots in this case 14:00 - 15:00 and 15:00 - 16:00, the availability window will show them as merged
+
+#### What I'm going to go for in this task
+* There are fixed slots available for booking
+* If there are only 30 minute ones and a person needs to schedule a 1-hour meeting - just occupy 2 slots, no merging or "carving"
 
 ### Codebase
 * Although it won't be a huge codebase, I grew really sick of looking at a bunch of unrelated services in a single folder, so using package-by-feature approach.

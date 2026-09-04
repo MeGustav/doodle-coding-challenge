@@ -14,4 +14,6 @@ public interface UserService {
 
     Optional<UserDto> findByEmail(String email);
 
+    boolean exists(UUID id);
+
 }
