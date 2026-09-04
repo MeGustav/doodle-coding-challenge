@@ -1,16 +1,19 @@
 package com.megustav.doodle.users.exceptions;
 
+import com.megustav.doodle.common.exceptions.DomainException;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseStatus;
 
-@ResponseStatus(HttpStatus.CONFLICT)
-public class EmailAlreadyInUseException extends RuntimeException {
+public class EmailAlreadyInUseException extends DomainException {
 
     public EmailAlreadyInUseException(String email) {
-        super("Email '%s' is already used".formatted(email));
+        super(HttpStatus.CONFLICT, message(email));
     }
 
     public EmailAlreadyInUseException(String email, Throwable cause) {
-        super("Email '%s' is already used".formatted(email), cause);
+        super(HttpStatus.CONFLICT, message(email), cause);
+    }
+
+    private static String message(String email) {
+        return "Email '%s' is already used".formatted(email);
     }
 }

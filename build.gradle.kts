@@ -38,6 +38,8 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql")
     runtimeOnly("org.flywaydb:flyway-database-postgresql")
 
+    runtimeOnly("io.micrometer:micrometer-registry-prometheus")
+
     annotationProcessor("org.projectlombok:lombok")
     implementation("org.apache.commons:commons-lang3")
 
